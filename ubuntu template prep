@@ -1,0 +1,99 @@
+
+#################################
+##
+## Get all packages up2date and
+## clean out any cruft in the
+## local packages
+##
+#################################
+apt update -y ;
+apt upgrade -y
+apt clean all ;
+
+
+#################################
+##
+## Get rid of the signs I was
+## tinkering with this
+##
+#################################
+[[ -a /etc/issue-original,v ]] && unlink /etc/issue-original,v ;
+[[ -a /etc/issue,v ]] && unlink /etc/issue,v ;
+ci -u /etc/issue ;
+
+
+
+#################################
+##
+## Remove the host-keys to they
+## will be regenerated when the
+## new VM is spun-up
+##
+## Also make sure I remove any
+## personal keys I may have been
+## using while setting up
+##
+#################################
+find /etc/ssh/*host* |xargs unlink ;
+find /root/.ssh/ -type f |xargs unlink ;
+find /home/*/.ssh/ -type f |xargs unlink ;
+
+
+
+#################################
+##
+## Get rid of the use of UUID in
+## FSTAB and any NIC configuration
+## so the new VM can find then when
+## the UUIDs are regenerated
+##
+## Since we use LVM, only the /boot
+## slice is a direct slice reference
+## the rest are logical volumes
+##
+#################################
+sed -i -e 's/UUID=[0-9a-f-]*\s/\/dev\/sda1\t/' /etc/fstab ;
+sed -i -e '/^UUID=[0-9a-f-]*.*/d' /etc/sysconfig/network-scripts/ifcfg-eno* ;
+sed -i -e '/^UUID=[0-9A-F-]*.*/d' /etc/sysconfig/network-scripts/ifcfg-eno* ;
+find /etc/udev/rules.d/ -iname '70*net*' |xargs unlink ;
+
+
+#################################
+##
+## Let the NTP daemon know to
+## expect a big jump in time, so
+## he doesn't freak out. Also let
+## him know that if the walls melt,
+## it is the acid, speaking and
+## he'll be alright
+##
+#################################
+[[ -a /etc/ntp.conf ]] && \
+  [[ "$(head -1 /etc/ntp.conf)" == "tinker panic 0" ]] || \
+  sed -i -e '1itinker panic 0\n' /etc/ntp.conf ;
+
+
+
+#################################
+##
+## Truncate the command-histories
+## because the learning-process
+## can contain some embarrassing
+## mistakes, some of which are
+## also bad opsec
+##
+#################################
+>/root/.bash_history ;
+>/home/*/.bash_history ;
+>/root/anaconda-ks.cfg ;
+
+
+
+#################################
+##
+## Lastly, instruct the OS to redo
+## the initial setup and put back
+## that new-machine-smell
+##
+#################################
+sys-unconfig ;
